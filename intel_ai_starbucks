@@ -1,0 +1,108 @@
+import requests
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+# Constants
+PHI3_URL = "https://cu-vertical-dimensional-continuity.trycloudflare.com/phi3/generate"
+PHI3_TOKEN = "AEulafWZQ1xhIkeLgjcp5nhL7d0cLPWiXAU34DTVvXI"  
+FLUX_URL = "https://mirrors-stability-males-supplement.trycloudflare.com/imagine/generate"
+FLUX_TOKEN = "unique-warm-tree-d536eb19a6112b289a167c7b"  
+
+def generate_marketing_copy(prompt):
+    """
+    Generate marketing copy based on a user prompt.
+    """
+    headers = {
+        "Authorization": f"Bearer {PHI3_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": f"<|system|>\nYou are a marketing strategist crafting engaging copy.<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>",
+        "parameters": {"max_new_tokens": 200}
+    }
+    response = requests.post(PHI3_URL, headers=headers, json=payload)
+    if response.status_code == 200:
+        return response.json().get("generated_text", "")
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+        return ""
+
+def generate_visual(prompt, output_path):
+    """
+    Generate a visual based on a prompt using the FLUX API.
+    """
+    headers = {
+        "Authorization": f"Bearer {FLUX_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "prompt": prompt,
+        "img_size": 1024,
+        "guidance_scale": 7.5,
+        "num_inference_steps": 50
+    }
+    response = requests.post(FLUX_URL, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        print(f"Image saved as {output_path}")
+        return output_path
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+        return None
+
+def create_social_media_post(image_path, text, output_path):
+    """
+    Overlay text onto an image to create a branded social media post.
+    """
+    try:
+        # Open the image
+        image = Image.open(image_path)
+
+        # Create a drawing context
+        draw = ImageDraw.Draw(image)
+
+        # Define text properties
+        font_path = "arial.ttf"  # Replace with the path to your font file
+        if os.path.exists(font_path):
+            font = ImageFont.truetype(font_path, 40)
+        else:
+            font = ImageFont.load_default()
+        
+        text_position = (10, image.height - 100)  # Position text near the bottom
+        text_color = "white"
+
+        # Add text to the image
+        draw.text(text_position, text, fill=text_color, font=font)
+
+        # Save the resulting image
+        image.save(output_path)
+        print(f"Social media post saved to {output_path}")
+        return output_path
+    except Exception as e:
+        print(f"Error creating social media post: {e}")
+        return None
+
+# Main Workflow
+if __name__ == "__main__":
+    # Example inputs
+    text_prompt = "Skip the deadlines, sip the chocolate—because adulting can wait! Cozy up with Starbucks and let a warm hug in a mug make your winter sweeter. #WarmHugsInAMug #AdultingCanWait"
+    visual_prompt = "A cozy top-down photo of Starbucks hot chocolate with whipped cream and marshmallows, surrounded by fuzzy mittens, a half-eaten cookie, and a book or Netflix, with steam forming a heart shape"
+
+    # Generate marketing copy
+    marketing_copy = generate_marketing_copy(text_prompt)
+    print("Generated Marketing Copy:", marketing_copy)
+
+    # Generate visual
+    visual_path = generate_visual(visual_prompt, "marketing_visual.png")
+
+    # Combine visual and text into a branded social media post
+    if visual_path:
+        final_post_path = create_social_media_post(visual_path, marketing_copy, "final_social_post.png")
+        if final_post_path:
+            print("Final social media post created successfully!")
+        else:
+            print("Failed to create final social media post.")
+    else:
+        print("Failed to generate visual.")
